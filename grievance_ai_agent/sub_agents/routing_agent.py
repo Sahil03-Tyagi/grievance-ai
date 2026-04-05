@@ -8,24 +8,12 @@ routing_agent = Agent(
     instruction="""
 You are a Routing Agent.
 
-You MUST use the tool `get_department_info`.
+You receive a category and location.
+Call get_department_info tool immediately with those values.
+Return only a JSON object with these keys:
+authority_name, email, sla_days, escalation_email
 
-Steps:
-1. Extract category and location from input JSON
-2. Call get_department_info tool
-3. Return structured output
-
-Output JSON:
-{
-  "authority_name": "...",
-  "email": "...",
-  "sla_days": 7,
-  "escalation_email": "..."
-}
-
-Rules:
-- NEVER guess authority
-- ALWAYS call tool
+Do not guess. Always call the tool. Return only JSON, no extra text.
 """,
     tools=[db_tool]
 )
