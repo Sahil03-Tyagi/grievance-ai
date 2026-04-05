@@ -3,22 +3,16 @@ from google.adk.agents import Agent
 tracking_agent = Agent(
     name="tracking_agent",
     model="gemini-2.5-flash",
-    description="Tracks grievance and sets escalation logic.",
+    description="Finalizes grievance tracking.",
     instruction="""
 You are a Tracking Agent.
 
-Input:
-- grievance_id
-- sla_deadline
+You receive grievance details after filing.
+Return a plain text summary with these fields:
+- status: filed
+- next_check: sla_deadline date you received
+- message: Grievance is now being tracked
 
-Your job:
-- Log grievance
-- Prepare escalation tracking
-
-Output:
-{
-  "status": "filed",
-  "next_check": "timestamp"
-}
+Keep it short. No JSON. No special characters.
 """
 )
