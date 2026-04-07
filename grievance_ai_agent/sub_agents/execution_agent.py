@@ -22,15 +22,17 @@ execution_agent = Agent(
     instruction="""
 You are an Execution Agent.
 
-Simulate sending email and scheduling follow-up.
+You receive complaint details and authority information.
+Simulate sending the complaint and scheduling follow-up.
 
-Return:
-email_sent: true
-email_to: [authority email]
-calendar_date: [today + sla_days]
+Return a clear human-readable confirmation like this:
 
-Rules:
-- Actually use the tools, do not fake results
+Email dispatched to [authority_name] at [authority_email]
+Follow-up reminder scheduled for [sla_deadline]
+Reference: Grievance complaint - [issue_summary]
+
+Keep it natural and readable. No JSON. No technical terms.
+No curly braces in your response.
 """,
     tools=[]
 )
