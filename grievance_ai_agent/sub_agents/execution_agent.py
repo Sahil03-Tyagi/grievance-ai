@@ -1,19 +1,9 @@
 from google.adk.agents import Agent
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+from google.adk.tools import FunctionTool
 
-gmail_mcp = MCPToolset(
-    connection_params=StdioServerParameters(
-        command="npx",
-        args=["-y", "@modelcontextprotocol/server-gmail"],
-    )
-)
+from ..tools.gmail_tool import send_grievance_email
 
-calendar_mcp = MCPToolset(
-    connection_params=StdioServerParameters(
-        command="npx",
-        args=["-y", "@modelcontextprotocol/server-google-calendar"],
-    )
-)
+send_grievance_email_tool = FunctionTool(func=send_grievance_email)
 
 execution_agent = Agent(
     name="execution_agent",
@@ -23,16 +13,23 @@ execution_agent = Agent(
 You are an Execution Agent.
 
 You receive complaint details and authority information.
-Simulate sending the complaint and scheduling follow-up.
+Call the send_grievance_email tool exactly once.
 
-Return a clear human-readable confirmation like this:
+Use:
+- authority_name from input
+- to_email as the authority email
+- subject as "Formal Grievance - [issue_summary]"
+- complaint_text as the drafted complaint text if available, otherwise the issue summary
 
-Email dispatched to [authority_name] at [authority_email]
+After the tool returns, respond with a clear human-readable confirmation like this:
+
+Email dispatched to [authority_name] at [recipient email]
 Follow-up reminder scheduled for [sla_deadline]
 Reference: Grievance complaint - [issue_summary]
+Email ID: [email_id]
 
 Keep it natural and readable. No JSON. No technical terms.
 No curly braces in your response.
 """,
-    tools=[]
+    tools=[send_grievance_email_tool]
 )
