@@ -1,0 +1,693 @@
+		  .rf-value.success { color: var(--success); }
+
+  /* Status badge inline */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+  }
+
+  .status-filed     { background: rgba(37,99,255,0.15); color: var(--accent); }
+  .status-escalated { background: rgba(245,158,11,0.15); color: var(--warn); }
+  .status-resolved  { background: rgba(16,185,129,0.15); color: var(--success); }
+
+  /* Dashboard stats */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .dash-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .dash-num {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .dash-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 4px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Loading spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all .3s ease;
+    font-family: var(--sans);
+    max-width: 300px;
+  }
+
+  #toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* Escalation list */
+  .escalation-item {
+    background: var(--card);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    animation: fadeUp .3s ease forwards;
+  }
+
+  .esc-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .esc-issue {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .esc-to {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--warn);
+  }
+
+  .esc-days {
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 4px;
+  }
+
+  /* Responsive tweak */
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 320px 1fr 300px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">GO</div>
+    <span class="logo-text">Grievance<span>OS</span></span>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <div class="dot"></div>
+      System <span class="stat-num" id="hdr-total">—</span> grievances
+    </div>
+    <div class="stat-pill">
+      Escalated <span class="stat-num" id="hdr-escalated" style="color:var(--warn)">—</span>
+    </div>
+    <div class="stat-pill">
+      Resolved <span class="stat-num" id="hdr-resolved" style="color:var(--success)">—</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- LEFT — Input -->
+  <section class="panel" id="panel-input">
+    <div class="panel-header">
+      <div class="panel-label">01 / Input</div>
+      <div class="panel-title">File a Grievance</div>
+    </div>
+    <div class="panel-body">
+
+      <textarea id="complaint" placeholder="Describe your problem in plain language...&#10;&#10;e.g. My electricity has been cut for 3 weeks in Ghaziabad and DISCOM is not responding."></textarea>
+
+      <div class="examples">
+        <div class="examples-label">Try these</div>
+        <span class="example-chip" onclick="setExample(this)">Water crisis in Ghaziabad</span>
+        <span class="example-chip" onclick="setExample(this)">Electricity cut in Delhi for 2 weeks</span>
+        <span class="example-chip" onclick="setExample(this)">Pension not received for 3 months in UP</span>
+        <span class="example-chip" onclick="setExample(this)">Road pothole in Ghaziabad for 4 months</span>
+      </div>
+
+      <button class="btn-file" id="btn-file" onclick="fileGrievance()">
+        File Grievance
+      </button>
+
+      <div class="divider"></div>
+
+      <div class="panel-label" style="margin-bottom:10px">Check Status</div>
+      <div class="search-row">
+        <input id="search-input" type="text" placeholder="Search by keyword e.g. water">
+        <button class="btn-search" onclick="checkStatus()">Look up</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="panel-label" style="margin-bottom:10px">Escalation Engine</div>
+      <button class="btn-escalate" onclick="runEscalation()">
+        Run SLA Check + Auto-Escalate
+      </button>
+
+    </div>
+  </section>
+
+  <!-- MIDDLE — Agent Pipeline -->
+  <section class="panel" id="panel-pipeline">
+    <div class="panel-header">
+      <div class="panel-label">02 / Pipeline</div>
+      <div class="panel-title">Agent Reasoning Trace</div>
+    </div>
+    <div class="panel-body" id="pipeline-body">
+      <div class="pipeline-idle">
+        <div class="pipeline-idle-icon">⬡</div>
+        <p>Submit a grievance to watch<br>the agent pipeline execute</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT — Result -->
+  <section class="panel" id="panel-result">
+    <div class="panel-header">
+      <div class="panel-label">03 / Output</div>
+      <div class="panel-title">Result</div>
+    </div>
+    <div class="panel-body" id="result-body">
+
+      <!-- Dashboard stats always visible -->
+      <div class="dash-grid" id="dash-grid">
+        <div class="dash-card">
+          <div class="dash-num" id="stat-total">—</div>
+          <div class="dash-label">Total</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-num" id="stat-filed" style="color:var(--accent)">—</div>
+          <div class="dash-label">Filed</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-num" id="stat-escalated" style="color:var(--warn)">—</div>
+          <div class="dash-label">Escalated</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-num" id="stat-resolved" style="color:var(--success)">—</div>
+          <div class="dash-label">Resolved</div>
+        </div>
+      </div>
+
+      <div id="result-cards"></div>
+
+    </div>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API = window.location.origin;
+
+  const AGENTS = [
+    {
+      key: 'classifier',
+      name: 'Classifier Agent',
+      icon: '◈',
+      desc: 'Extracts category, location and maps to authority via AlloyDB',
+      reasoning: 'Parsing complaint → querying departments table → returning authority details'
+    },
+    {
+      key: 'drafting',
+      name: 'Drafting Agent',
+      icon: '◉',
+      desc: 'Generates formal legal-tone complaint letter',
+      reasoning: 'Composing formal grievance with legal references and SLA context'
+    },
+    {
+      key: 'execution',
+      name: 'Execution Agent',
+      icon: '◎',
+      desc: 'Dispatches complaint and schedules follow-up',
+      reasoning: 'Sending email to authority · Scheduling SLA deadline reminder'
+    },
+    {
+      key: 'tracking',
+      name: 'Tracking Agent',
+      icon: '◐',
+      desc: 'Logs to AlloyDB · Initializes SLA monitoring',
+      reasoning: 'Writing to grievances table · Logging reasoning to workflow_logs · Starting auto-escalation watch'
+    },
+  ];
+
+  function setExample(el) {
+    document.getElementById('complaint').value = el.textContent;
+    document.getElementById('complaint').focus();
+  }
+
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  function buildPipeline(active = -1, doneUntil = -1, reasonings = {}) {
+    const body = document.getElementById('pipeline-body');
+    body.innerHTML = '';
+
+    AGENTS.forEach((agent, i) => {
+      const state = i <= doneUntil ? 'done' : i === active ? 'running' : 'pending';
+      const badgeClass = `badge-${state}`;
+      const badgeText = state === 'done' ? 'done' : state === 'running' ? 'running...' : 'waiting';
+      const iconClass = `step-icon ${state}`;
+      const iconContent = state === 'done' ? '✓' : agent.icon;
+      const reasoning = reasonings[agent.key] || agent.reasoning;
+
+      const div = document.createElement('div');
+      div.className = `agent-step`;
+      div.id = `step-${agent.key}`;
+      div.innerHTML = `
+        <div class="${iconClass}">${iconContent}</div>
+        <div class="step-content">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div class="step-name">${agent.name}</div>
+            <span class="step-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="step-desc">${agent.desc}</div>
+          <div class="step-reasoning ${state !== 'pending' ? 'show' : ''}">${reasoning}</div>
+        </div>
+      `;
+      body.appendChild(div);
+
+      // Stagger animation
+      setTimeout(() => div.classList.add('visible'), i * 80);
+    });
+  }
+
+  async function animatePipeline(reasonings = {}) {
+    for (let i = 0; i < AGENTS.length; i++) {
+      buildPipeline(i, i - 1, reasonings);
+      await sleep(700);
+      buildPipeline(i, i, reasonings);
+      await sleep(300);
+    }
+    buildPipeline(-1, AGENTS.length - 1, reasonings);
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function fileGrievance() {
+  const complaint = document.getElementById('complaint').value.trim();
+  if (!complaint) { showToast('Please describe your grievance first'); return; }
+
+  const btn = document.getElementById('btn-file');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+  // Reset pipeline to all pending
+  resetPipeline();
+
+  const eventSource = new EventSource(
+    `${API}/grievance/stream?complaint=${encodeURIComponent(complaint)}`,
+  );
+
+  // We need POST not GET for EventSource — use fetch with ReadableStream instead
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+  try {
+    const response = await fetch(`${API}/grievance/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ complaint })
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw) continue;
+
+        let evt;
+        try { evt = JSON.parse(raw); } catch { continue; }
+
+        handleStreamEvent(evt);
+      }
+    }
+
+  } catch (err) {
+    showToast('Error: ' + err.message);
+    resetPipeline();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'File Grievance';
+  }
+}
+
+function handleStreamEvent(evt) {
+  console.log('SSE event:', evt); // visible in browser console
+
+  switch (evt.type) {
+
+    case 'pipeline_start':
+      resetPipeline();
+      break;
+
+    case 'agent_start':
+      setAgentState(evt.agent, 'running');
+      showToast(`${evt.agent_name} is working...`, 2000);
+      break;
+
+    case 'tool_call':
+      // Show tool being called inside the running agent
+      updateAgentReasoning(evt.agent, `Calling tool: ${evt.tool}...`);
+      break;
+
+    case 'tool_done':
+      updateAgentReasoning(evt.agent, `Tool ${evt.tool} completed`);
+      setAgentState(evt.agent, 'done');
+      break;
+
+    case 'final':
+      // Mark all pending as done
+      markAllDone();
+      parseAndShowResult(evt.response);
+      loadDashboard();
+      showToast('Grievance filed successfully');
+      break;
+
+    case 'heartbeat':
+      console.log(`Pipeline heartbeat: ${evt.count} events processed`);
+      break;
+
+    case 'error':
+      showToast('Error: ' + evt.message, 5000);
+      break;
+  }
+}
+
+// Agent state management
+const agentStates = {};
+
+function resetPipeline() {
+  AGENTS.forEach(a => {
+    agentStates[a.key] = 'pending';
+  });
+  renderPipeline();
+}
+
+function setAgentState(key, state) {
+  agentStates[key] = state;
+  renderPipeline();
+}
+
+function markAllDone() {
+  AGENTS.forEach(a => {
+    if (agentStates[a.key] !== 'done') agentStates[a.key] = 'done';
+  });
+  renderPipeline();
+}
+
+function updateAgentReasoning(key, text) {
+  const el = document.getElementById(`reasoning-${key}`);
+  if (el) { el.textContent = text; el.classList.add('show'); }
+}
+
+function renderPipeline() {
+  const body = document.getElementById('pipeline-body');
+  body.innerHTML = '';
+
+  AGENTS.forEach((agent, i) => {
+    const state = agentStates[agent.key] || 'pending';
+    const div = document.createElement('div');
+    div.className = 'agent-step visible';
+    div.innerHTML = `
+      <div class="step-icon ${state}">
+        ${state === 'done' ? '✓' : state === 'running' ? '◌' : agent.icon}
+      </div>
+      <div class="step-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div class="step-name">${agent.name}</div>
+          <span class="step-badge badge-${state}">
+            ${state === 'done' ? 'done' : state === 'running' ? 'running...' : 'waiting'}
+          </span>
+        </div>
+        <div class="step-desc">${agent.desc}</div>
+        <div class="step-reasoning ${state !== 'pending' ? 'show' : ''}"
+             id="reasoning-${agent.key}">
+          ${agent.reasoning}
+        </div>
+      </div>
+    `;
+    body.appendChild(div);
+  });
+}
+
+function parseAndShowResult(text) {
+  const id    = text.match(/ID:\s*([a-f0-9-]+)/i)?.[1] || '—';
+  const auth  = text.match(/Authority:\s*(.+)/i)?.[1]?.trim() || '—';
+  const email = text.match(/Email[^:]*:\s*(.+)/i)?.[1]?.trim() || '—';
+  const sla   = text.match(/SLA Deadline:\s*(.+)/i)?.[1]?.trim() || '—';
+
+  showResult('success', 'Complaint Filed', [
+    { label: 'Reference ID',  value: id,    cls: 'mono' },
+    { label: 'Authority',     value: auth },
+    { label: 'Email sent to', value: email, cls: 'mono' },
+    { label: 'SLA Deadline',  value: sla,   cls: 'warn' },
+    { label: 'Status',        value: 'Filed', cls: 'success' },
+    { label: 'Next action',   value: 'Auto-escalation if unresolved' },
+  ]);
+
+  if (id !== '—') fetchAndShowLogs(id);
+}
+
+  async function fetchAndShowLogs(grievanceId) {
+    try {
+      const res  = await fetch(`${API}/logs/${grievanceId}`);
+      const data = await res.json();
+      if (!data.reasoning_trace) return;
+
+      const reasonings = {};
+      const keyMap = {
+        'classifier_agent': 'classifier',
+        'drafting_agent':   'drafting',
+        'execution_agent':  'execution',
+        'tracking_agent':   'tracking'
+      };
+
+      data.reasoning_trace.forEach(log => {
+        const key = keyMap[log.agent];
+        if (key) reasonings[key] = log.reasoning;
+      });
+
+      buildPipeline(-1, AGENTS.length - 1, reasonings);
+    } catch (e) {}
+  }
+
+  async function checkStatus() {
+    const keyword = document.getElementById('search-input').value.trim();
+    if (!keyword) { showToast('Enter a keyword to search'); return; }
+
+    try {
+      const res  = await fetch(`${API}/grievance/status?keyword=${encodeURIComponent(keyword)}`);
+      const data = await res.json();
+
+      if (!data.found) {
+        showResult('info', 'Status Lookup', [
+          { label: 'Result', value: data.message || 'No grievance found' }
+        ]);
+        return;
+      }
+
+      const statusCls = data.status === 'escalated' ? 'warn' :
+                        data.status === 'resolved'  ? 'success' : '';
+
+      showResult('info', 'Grievance Status', [
+        { label: 'Reference ID',     value: data.grievance_id, cls: 'mono' },
+        { label: 'Category',         value: data.category },
+        { label: 'Location',         value: data.location },
+        { label: 'Issue',            value: data.issue_summary },
+        { label: 'Status',           value: data.status, cls: statusCls },
+        { label: 'SLA Deadline',     value: data.sla_deadline },
+        { label: 'Escalation Level', value: data.escalation_level },
+        { label: 'Filed on',         value: data.filed_on },
+      ]);
+
+      if (data.reasoning_trace && data.reasoning_trace.length) {
+        const reasonings = {};
+        const keyMap = {
+          'classifier_agent': 'classifier',
+          'drafting_agent':   'drafting',
+          'execution_agent':  'execution',
+          'tracking_agent':   'tracking'
+        };
+        data.reasoning_trace.forEach(log => {
+          const key = keyMap[log.agent];
+          if (key) reasonings[key] = log.reasoning;
+        });
+        buildPipeline(-1, AGENTS.length - 1, reasonings);
+      }
+
+    } catch (err) {
+      showToast('Lookup failed: ' + err.message);
+    }
+  }
+
+  async function runEscalation() {
+    const btn = document.querySelector('.btn-escalate');
+    btn.textContent = 'Checking SLA breaches...';
+    btn.disabled = true;
+
+    try {
+      const res  = await fetch(`${API}/escalate`, { method: 'POST' });
+      const data = await res.json();
+
+      const cards = document.getElementById('result-cards');
+
+      if (data.escalated_count === 0) {
+        showResult('success', 'Escalation Check Complete', [
+          { label: 'Result', value: data.message }
+        ]);
+        showToast('No SLA breaches found');
+        return;
+      }
+
+      // Show escalation summary card
+      cards.innerHTML = '';
+      const summaryCard = document.createElement('div');
+      summaryCard.className = 'result-card warning';
+      summaryCard.innerHTML = `
+        <div class="result-tag warning">⚠ Escalation Report</div>
+        <div class="result-field">
+          <span class="rf-label">Escalated</span>
+          <span class="rf-value warn">${data.escalated_count} grievance(s)</span>
+        </div>
+        <div class="result-field">
+          <span class="rf-label">Action taken</span>
+          <span class="rf-value">Auto-escalation emails queued</span>
+        </div>
+      `;
+      cards.appendChild(summaryCard);
+
+      // Show each escalated grievance
+      data.escalated.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'escalation-item';
+        el.innerHTML = `
+          <div class="esc-id">ID: ${item.grievance_id.substring(0,8).toUpperCase()}</div>
+          <div class="esc-issue">${item.issue_summary || item.category + ' — ' + item.location}</div>
+          <div class="esc-to">Escalated to: ${item.escalated_to}</div>
+          <div class="esc-days">${item.days_overdue} days overdue</div>
+        `;
+        cards.appendChild(el);
+      });
+
+      loadDashboard();
+      showToast(`${data.escalated_count} grievance(s) escalated`);
+
+    } catch (err) {
+      showToast('Escalation failed: ' + err.message);
+    } finally {
+      btn.textContent = 'Run SLA Check + Auto-Escalate';
+      btn.disabled = false;
+    }
+  }
+
+  function showResult(type, title, fields) {
+    const cards = document.getElementById('result-cards');
+    const card = document.createElement('div');
+    card.className = `result-card ${type}`;
+
+    const tagIcon = type === 'success' ? '✓' : type === 'warning' ? '⚠' : 'i';
+    card.innerHTML = `
+      <div class="result-tag ${type}">${tagIcon} ${title}</div>
+      ${fields.map(f => `
+        <div class="result-field">
+          <span class="rf-label">${f.label}</span>
+          <span class="rf-value ${f.cls || ''}">${f.value}</span>
+        </div>
+      `).join('')}
+    `;
+
+    cards.innerHTML = '';
+    cards.appendChild(card);
+  }
+
+  async function loadDashboard() {
+    try {
+      const res  = await fetch(`${API}/dashboard`);
+      const data = await res.json();
+
+      document.getElementById('stat-total').textContent     = data.total_grievances ?? 0;
+      document.getElementById('stat-filed').textContent     = data.filed ?? 0;
+      document.getElementById('stat-escalated').textContent = data.escalated ?? 0;
+      document.getElementById('stat-resolved').textContent  = data.resolved ?? 0;
+
+      document.getElementById('hdr-total').textContent     = data.total_grievances ?? 0;
+      document.getElementById('hdr-escalated').textContent = data.escalated ?? 0;
+      document.getElementById('hdr-resolved').textContent  = data.resolved ?? 0;
+    } catch (e) {}
+  }
+
+  // Init
+  loadDashboard();
+  setInterval(loadDashboard, 30000);
+</script>
+</body>
+</html>
