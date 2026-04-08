@@ -3,1222 +3,398 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GrievanceOS — Citizen Grievance Resolution</title>
+<title>GrievanceOS — Citizen Grievance Assistant</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:       #0a0c10;
-    --surface:  #111318;
-    --card:     #161a22;
-    --border:   #1e2330;
-    --accent:   #2563ff;
-    --accent2:  #00d4aa;
-    --warn:     #f59e0b;
-    --danger:   #ef4444;
-    --success:  #10b981;
-    --text:     #e8eaf0;
-    --muted:    #6b7280;
-    --mono:     'DM Mono', monospace;
-    --sans:     'DM Sans', sans-serif;
-    --display:  'Syne', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Grid noise background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(37,99,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(37,99,255,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Header */
-  header {
-    position: relative;
-    z-index: 10;
-    padding: 20px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    background: rgba(10,12,16,0.9);
-    backdrop-filter: blur(12px);
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    width: 36px; height: 36px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--display);
-    font-weight: 800;
-    font-size: 16px;
-    color: #fff;
-    letter-spacing: -1px;
-  }
-
-  .logo-text {
-    font-family: var(--display);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.5px;
-  }
-
-  .logo-text span { color: var(--accent); }
-
-  .header-stats {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .stat-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    background: var(--surface);
-  }
-
-  .stat-pill .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--success);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  .stat-num {
-    color: var(--text);
-    font-weight: 500;
-  }
-
-  /* Main layout */
-  main {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: 380px 1fr 340px;
-    gap: 0;
-    height: calc(100vh - 65px);
-  }
-
-  /* Panel base */
-  .panel {
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  .panel:last-child { border-right: none; }
-
-  .panel-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: rgba(17,19,24,0.95);
-    backdrop-filter: blur(8px);
-    z-index: 5;
-  }
-
-  .panel-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: .12em;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-
-  .panel-title {
-    font-family: var(--display);
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-  }
-
-  .panel-body { padding: 24px; }
-
-  /* Left panel — input */
-  #panel-input { background: var(--surface); }
-
-  textarea#complaint {
-    width: 100%;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.7;
-    padding: 16px;
-    resize: none;
-    height: 180px;
-    outline: none;
-    transition: border-color .2s;
-  }
-
-  textarea#complaint::placeholder { color: var(--muted); }
-  textarea#complaint:focus { border-color: var(--accent); }
-
-  .examples {
-    margin-top: 16px;
-  }
-
-  .examples-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-
-  .example-chip {
-    display: inline-block;
-    margin: 4px 4px 4px 0;
-    padding: 6px 12px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 12px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all .15s;
-    font-family: var(--sans);
-  }
-
-  .example-chip:hover {
-    border-color: var(--accent);
-    color: var(--text);
-    background: rgba(37,99,255,0.08);
-  }
-
-  .btn-file {
-    width: 100%;
-    margin-top: 20px;
-    padding: 14px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    font-family: var(--display);
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .2s;
-    letter-spacing: .02em;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-file:hover { background: #1d4fd8; transform: translateY(-1px); }
-  .btn-file:active { transform: translateY(0); }
-  .btn-file:disabled {
-    background: var(--border);
-    color: var(--muted);
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-escalate {
-    width: 100%;
-    margin-top: 10px;
-    padding: 12px;
-    background: transparent;
-    color: var(--warn);
-    border: 1px solid var(--warn);
-    border-radius: 12px;
-    font-family: var(--display);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all .2s;
-  }
-
-  .btn-escalate:hover {
-    background: rgba(245,158,11,0.1);
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 24px 0;
-  }
-
-  /* Status search */
-  .search-row {
-    display: flex;
-    gap: 8px;
-  }
-
-  input#search-input {
-    flex: 1;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 13px;
-    padding: 10px 14px;
-    outline: none;
-    transition: border-color .2s;
-  }
-
-  input#search-input:focus { border-color: var(--accent2); }
-  input#search-input::placeholder { color: var(--muted); }
-
-  .btn-search {
-    padding: 10px 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--accent2);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: var(--sans);
-    transition: all .15s;
-    white-space: nowrap;
-  }
-
-  .btn-search:hover { border-color: var(--accent2); }
-
-  /* Middle panel — pipeline */
-  #panel-pipeline { background: var(--bg); }
-
-  .pipeline-idle {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 60%;
-    opacity: 0.3;
-  }
-
-  .pipeline-idle-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-    filter: grayscale(1);
-  }
-
-  .pipeline-idle p {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  /* Agent step */
-  .agent-step {
-    display: flex;
-    gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid var(--border);
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity .4s ease, transform .4s ease;
-  }
-
-  .agent-step.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .agent-step:last-child { border-bottom: none; }
-
-  .step-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  .step-icon.pending {
-    background: var(--card);
-    border: 1px dashed var(--border);
-  }
-
-  .step-icon.running {
-    background: rgba(37,99,255,0.15);
-    border: 1px solid var(--accent);
-    animation: glow 1s infinite alternate;
-  }
-
-  .step-icon.done {
-    background: rgba(16,185,129,0.15);
-    border: 1px solid var(--success);
-  }
-
-  .step-icon.error {
-    background: rgba(239,68,68,0.15);
-    border: 1px solid var(--danger);
-  }
-
-  @keyframes glow {
-    from { box-shadow: 0 0 0px rgba(37,99,255,0); }
-    to   { box-shadow: 0 0 12px rgba(37,99,255,0.4); }
-  }
-
-  .step-content { flex: 1; }
-
-  .step-name {
-    font-family: var(--display);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 2px;
-  }
-
-  .step-desc {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-
-  .step-reasoning {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent2);
-    line-height: 1.6;
-    background: rgba(0,212,170,0.05);
-    border: 1px solid rgba(0,212,170,0.15);
-    border-radius: 6px;
-    padding: 8px 10px;
-    display: none;
-  }
-
-  .step-reasoning.show { display: block; }
-
-  .step-badge {
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-weight: 500;
-  }
-
-  .badge-pending { background: var(--card); color: var(--muted); }
-  .badge-running { background: rgba(37,99,255,0.15); color: var(--accent); }
-  .badge-done    { background: rgba(16,185,129,0.15); color: var(--success); }
-  .badge-error   { background: rgba(239,68,68,0.15); color: var(--danger); }
-
-  /* Right panel — result */
-  #panel-result { background: var(--surface); }
-
-  .result-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 50%;
-    opacity: 0.25;
-    text-align: center;
-    padding: 24px;
-  }
-
-  .result-empty p {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 8px;
-  }
-
-  /* Result card */
-  .result-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 16px;
-    animation: fadeUp .4s ease forwards;
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .result-card.success { border-color: rgba(16,185,129,0.3); }
-  .result-card.warning { border-color: rgba(245,158,11,0.3); }
-  .result-card.info    { border-color: rgba(37,99,255,0.3); }
-
-  .result-tag {
-    font-family: var(--mono);
-    font-size: 10px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .result-tag.success { color: var(--success); }
-  .result-tag.warning { color: var(--warn); }
-  .result-tag.info    { color: var(--accent); }
-
-  .result-field {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
-  }
-
-  .result-field:last-child { border-bottom: none; }
-
-  .rf-label {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--mono);
-    flex-shrink: 0;
-    padding-top: 1px;
-  }
-
-  .rf-value {
-    font-size: 13px;
-    color: var(--text);
-    text-align: right;
-    font-weight: 500;
-    word-break: break-all;
-  }
-
-  .rf-value.mono {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent2);
-  }
-
-  .rf-value.warn { color: var(--warn); }
-  .rf-value.success { color: var(--success); }
-
-  /* Status badge inline */
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: var(--mono);
-  }
-
-  .status-filed     { background: rgba(37,99,255,0.15); color: var(--accent); }
-  .status-escalated { background: rgba(245,158,11,0.15); color: var(--warn); }
-  .status-resolved  { background: rgba(16,185,129,0.15); color: var(--success); }
-
-  /* Dashboard stats */
-  .dash-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .dash-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-    text-align: center;
-  }
-
-  .dash-num {
-    font-family: var(--display);
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1;
-  }
-
-  .dash-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-top: 4px;
-  }
-
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* Loading spinner */
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.2);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 8px;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Toast */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 18px;
-    font-size: 13px;
-    color: var(--text);
-    z-index: 100;
-    transform: translateY(80px);
-    opacity: 0;
-    transition: all .3s ease;
-    font-family: var(--sans);
-    max-width: 300px;
-  }
-
-  #toast.show {
-    transform: translateY(0);
-    opacity: 1;
-  }
-
-  /* Escalation list */
-  .escalation-item {
-    background: var(--card);
-    border: 1px solid rgba(245,158,11,0.2);
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 10px;
-    animation: fadeUp .3s ease forwards;
-  }
-
-  .esc-id {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-
-  .esc-issue {
-    font-size: 13px;
-    color: var(--text);
-    font-weight: 500;
-    margin-bottom: 6px;
-  }
-
-  .esc-to {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--warn);
-  }
-
-  .esc-days {
-    font-size: 11px;
-    color: var(--danger);
-    margin-top: 4px;
-  }
-
-  /* Responsive tweak */
-  @media (max-width: 1100px) {
-    main { grid-template-columns: 320px 1fr 300px; }
-  }
+:root {
+  --bg:#090b0f; --surface:#0f1117; --card:#141820; --border:#1c2030;
+  --accent:#2563ff; --teal:#00c9a7; --warn:#f59e0b; --danger:#ef4444; --ok:#10b981;
+  --text:#e2e5ed; --muted:#5a6272;
+  --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; --disp:'Syne',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(37,99,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,255,.025) 1px,transparent 1px);background-size:48px 48px;}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:13px 24px;background:rgba(9,11,15,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(12px);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-mark{width:32px;height:32px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:13px;color:#fff;}
+.logo-name{font-family:var(--disp);font-size:18px;font-weight:700;}
+.logo-name span{color:var(--accent);}
+.hdr-stats{display:flex;gap:10px;align-items:center;}
+.hpill{display:flex;align-items:center;gap:5px;padding:5px 11px;border:1px solid var(--border);border-radius:20px;background:var(--surface);font-family:var(--mono);font-size:11px;color:var(--muted);}
+.hpill b{color:var(--text);font-weight:500;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+main{position:relative;z-index:1;flex:1;overflow:hidden;display:grid;grid-template-columns:1fr 300px 320px;}
+.col{border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.col:last-child{border-right:none;}
+.col-head{padding:13px 18px;border-bottom:1px solid var(--border);background:rgba(15,17,23,.96);flex-shrink:0;}
+.col-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px;}
+.col-title{font-family:var(--disp);font-size:14px;font-weight:700;}
+/* chat */
+#chat-messages{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;}
+.msg{display:flex;gap:9px;animation:fadeUp .25s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse;}
+.msg-av{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--disp);}
+.msg.user .msg-av{background:var(--accent);color:#fff;}
+.msg.bot  .msg-av{background:var(--card);border:1px solid var(--border);color:var(--teal);}
+.msg-bub{max-width:78%;padding:11px 14px;border-radius:13px;font-size:13px;line-height:1.7;border:1px solid transparent;}
+.msg.user .msg-bub{background:rgba(37,99,255,.14);border-color:rgba(37,99,255,.24);border-bottom-right-radius:3px;}
+.msg.bot  .msg-bub{background:var(--card);border-color:var(--border);border-bottom-left-radius:3px;}
+.msg.bot .msg-bub.filing{border-color:rgba(0,201,167,.2);background:rgba(0,201,167,.04);}
+.filed-card{margin-top:10px;padding:11px;border-radius:9px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18);}
+.fr{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;gap:8px;}
+.fr:last-child{border-bottom:none;}
+.fk{color:var(--muted);font-family:var(--mono);font-size:10px;flex-shrink:0;}
+.fv{color:var(--text);font-weight:500;text-align:right;word-break:break-all;font-size:12px;}
+.fv.teal{color:var(--teal);font-family:var(--mono);}
+.fv.warn{color:var(--warn);}
+.fv.ok{color:var(--ok);}
+.typing-dots{display:flex;gap:4px;padding:12px 14px;}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:td 1.2s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes td{0%,80%,100%{transform:scale(1);opacity:.4}40%{transform:scale(1.2);opacity:1}}
+.chat-foot{padding:14px 18px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.chip{padding:4px 11px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;transition:.15s;}
+.chip:hover{border-color:var(--accent);color:var(--text);}
+.inp-row{display:flex;gap:8px;align-items:flex-end;}
+textarea#mi{flex:1;background:var(--card);border:1px solid var(--border);border-radius:11px;color:var(--text);font-family:var(--sans);font-size:13px;padding:10px 13px;resize:none;outline:none;line-height:1.5;max-height:100px;min-height:42px;transition:border-color .2s;}
+textarea#mi:focus{border-color:var(--accent);}
+textarea#mi::placeholder{color:var(--muted);}
+.btn-send{width:42px;height:42px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
+.btn-send:hover{background:#1d4fd8;}
+.btn-send:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+/* pipeline */
+#pipe-scroll{flex:1;overflow-y:auto;padding:16px;}
+.pipe-idle{text-align:center;padding:36px 16px;opacity:.25;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.8;}
+.ac{border:1px solid var(--border);border-radius:11px;padding:12px;margin-bottom:10px;background:var(--card);transition:.3s;}
+.ac.running{border-color:var(--accent);background:rgba(37,99,255,.05);box-shadow:0 0 14px rgba(37,99,255,.09);}
+.ac.done{border-color:rgba(16,185,129,.25);background:rgba(16,185,129,.03);}
+.ac.pending{opacity:.4;}
+.ac-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.ac-name{font-family:var(--disp);font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;}
+.ac-ico{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.running .ac-ico{background:rgba(37,99,255,.2);animation:gr 1s infinite alternate;}
+.done    .ac-ico{background:rgba(16,185,129,.2);}
+.pending .ac-ico{background:var(--surface);}
+@keyframes gr{from{box-shadow:none}to{box-shadow:0 0 8px rgba(37,99,255,.45)}}
+.ac-badge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;}
+.b-pending{background:var(--surface);color:var(--muted);}
+.b-running{background:rgba(37,99,255,.15);color:var(--accent);}
+.b-done{background:rgba(16,185,129,.15);color:var(--ok);}
+.ac-desc{font-size:11px;color:var(--muted);margin-bottom:5px;}
+.ac-reason{font-family:var(--mono);font-size:10px;color:var(--teal);line-height:1.6;background:rgba(0,201,167,.05);border:1px solid rgba(0,201,167,.1);border-radius:5px;padding:7px 9px;display:none;}
+.ac-reason.show{display:block;}
+.tool-tag{display:inline-block;margin:4px 4px 0 0;font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(37,99,255,.1);color:var(--accent);}
+/* email col */
+#email-col{background:var(--surface);}
+#email-scroll{flex:1;overflow-y:auto;padding:14px;}
+.dash-g{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;}
+.dc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center;}
+.dc-n{font-family:var(--disp);font-size:22px;font-weight:800;}
+.dc-l{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:2px;}
+.sec-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:9px;}
+.ecard{background:var(--card);border:1px solid var(--border);border-radius:9px;margin-bottom:9px;overflow:hidden;animation:fadeUp .3s ease;}
+.ehead{padding:9px 13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.eid{font-family:var(--mono);font-size:10px;color:var(--teal);}
+.eto{padding:7px 13px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);}
+.eto span{color:var(--text);font-weight:500;}
+.esubj{padding:7px 13px 3px;font-size:12px;font-weight:500;}
+.ebody{padding:3px 13px 10px;font-size:11px;color:var(--muted);line-height:1.6;max-height:72px;overflow:hidden;}
+.eexpand{padding:5px 13px 9px;font-size:11px;color:var(--accent);cursor:pointer;font-family:var(--mono);}
+.efull{padding:7px 13px 11px;font-size:11px;color:var(--muted);line-height:1.6;display:none;white-space:pre-wrap;}
+.bs{background:rgba(16,185,129,.12);color:var(--ok);font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;}
+.be{background:rgba(245,158,11,.12);color:var(--warn);font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:20px;}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+#toast{position:fixed;bottom:18px;right:18px;z-index:100;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 15px;font-size:12px;max-width:260px;transform:translateY(55px);opacity:0;transition:.3s;}
+#toast.show{transform:translateY(0);opacity:1;}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <div class="logo-icon">GO</div>
-    <span class="logo-text">Grievance<span>OS</span></span>
+    <div class="logo-mark">GO</div>
+    <div class="logo-name">Grievance<span>OS</span></div>
   </div>
-  <div class="header-stats">
-    <div class="stat-pill">
-      <div class="dot"></div>
-      System <span class="stat-num" id="hdr-total">—</span> grievances
-    </div>
-    <div class="stat-pill">
-      Escalated <span class="stat-num" id="hdr-escalated" style="color:var(--warn)">—</span>
-    </div>
-    <div class="stat-pill">
-      Resolved <span class="stat-num" id="hdr-resolved" style="color:var(--success)">—</span>
-    </div>
+  <div class="hdr-stats">
+    <div class="hpill"><div class="live-dot"></div>Live</div>
+    <div class="hpill">Total <b id="h-total">—</b></div>
+    <div class="hpill">Escalated <b id="h-esc" style="color:var(--warn)">—</b></div>
+    <div class="hpill">Resolved <b id="h-res" style="color:var(--ok)">—</b></div>
   </div>
 </header>
 
 <main>
-
-  <!-- LEFT — Input -->
-  <section class="panel" id="panel-input">
-    <div class="panel-header">
-      <div class="panel-label">01 / Input</div>
-      <div class="panel-title">File a Grievance</div>
+  <!-- COL 1: CHAT -->
+  <div class="col">
+    <div class="col-head">
+      <div class="col-label">01 / Conversation</div>
+      <div class="col-title">Citizen Assistant</div>
     </div>
-    <div class="panel-body">
-
-      <textarea id="complaint" placeholder="Describe your problem in plain language...&#10;&#10;e.g. My electricity has been cut for 3 weeks in Ghaziabad and DISCOM is not responding."></textarea>
-
-      <div class="examples">
-        <div class="examples-label">Try these</div>
-        <span class="example-chip" onclick="setExample(this)">Water crisis in Ghaziabad</span>
-        <span class="example-chip" onclick="setExample(this)">Electricity cut in Delhi for 2 weeks</span>
-        <span class="example-chip" onclick="setExample(this)">Pension not received for 3 months in UP</span>
-        <span class="example-chip" onclick="setExample(this)">Road pothole in Ghaziabad for 4 months</span>
-      </div>
-
-      <button class="btn-file" id="btn-file" onclick="fileGrievance()">
-        File Grievance
-      </button>
-
-      <div class="divider"></div>
-
-      <div class="panel-label" style="margin-bottom:10px">Check Status</div>
-      <div class="search-row">
-        <input id="search-input" type="text" placeholder="Search by keyword e.g. water">
-        <button class="btn-search" onclick="checkStatus()">Look up</button>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="panel-label" style="margin-bottom:10px">Escalation Engine</div>
-      <button class="btn-escalate" onclick="runEscalation()">
-        Run SLA Check + Auto-Escalate
-      </button>
-
-    </div>
-  </section>
-
-  <!-- MIDDLE — Agent Pipeline -->
-  <section class="panel" id="panel-pipeline">
-    <div class="panel-header">
-      <div class="panel-label">02 / Pipeline</div>
-      <div class="panel-title">Agent Reasoning Trace</div>
-    </div>
-    <div class="panel-body" id="pipeline-body">
-      <div class="pipeline-idle">
-        <div class="pipeline-idle-icon">⬡</div>
-        <p>Submit a grievance to watch<br>the agent pipeline execute</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- RIGHT — Result -->
-  <section class="panel" id="panel-result">
-    <div class="panel-header">
-      <div class="panel-label">03 / Output</div>
-      <div class="panel-title">Result</div>
-    </div>
-    <div class="panel-body" id="result-body">
-
-      <!-- Dashboard stats always visible -->
-      <div class="dash-grid" id="dash-grid">
-        <div class="dash-card">
-          <div class="dash-num" id="stat-total">—</div>
-          <div class="dash-label">Total</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-num" id="stat-filed" style="color:var(--accent)">—</div>
-          <div class="dash-label">Filed</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-num" id="stat-escalated" style="color:var(--warn)">—</div>
-          <div class="dash-label">Escalated</div>
-        </div>
-        <div class="dash-card">
-          <div class="dash-num" id="stat-resolved" style="color:var(--success)">—</div>
-          <div class="dash-label">Resolved</div>
+    <div id="chat-messages">
+      <div class="msg bot">
+        <div class="msg-av">⚡</div>
+        <div class="msg-bub">
+          Namaste! I am <strong>GrievanceOS</strong> — your AI-powered citizen grievance assistant.<br><br>
+          I can help you <strong>file complaints</strong> with the right government authority, <strong>check complaint status</strong>, answer questions about your <strong>rights</strong>, or trigger <strong>auto-escalation</strong> for unresolved issues.<br><br>
+          What can I help you with today?
         </div>
       </div>
-
-      <div id="result-cards"></div>
-
     </div>
-  </section>
+    <div class="chat-foot">
+      <div class="chips">
+        <span class="chip" onclick="qs(this)">Water crisis in Ghaziabad</span>
+        <span class="chip" onclick="qs(this)">Electricity cut in Delhi</span>
+        <span class="chip" onclick="qs(this)">What to do in electricity crisis?</span>
+        <span class="chip" onclick="qs(this)">Status of my water complaint</span>
+        <span class="chip" onclick="qs(this)">Demo escalation</span>
+      </div>
+      <div class="inp-row">
+        <textarea id="mi" placeholder="Type your grievance or question..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();send()}"
+          oninput="ar(this)"></textarea>
+        <button class="btn-send" id="bsend" onclick="send()">↑</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- COL 2: PIPELINE -->
+  <div class="col">
+    <div class="col-head">
+      <div class="col-label">02 / Agent Pipeline</div>
+      <div class="col-title">Reasoning Trace</div>
+    </div>
+    <div id="pipe-scroll">
+      <div class="pipe-idle">Submit a complaint<br>to watch agents execute<br><br>Each agent fires in sequence<br>with real reasoning logged</div>
+    </div>
+  </div>
+
+  <!-- COL 3: EMAILS + STATS -->
+  <div class="col" id="email-col">
+    <div class="col-head">
+      <div class="col-label">03 / Output</div>
+      <div class="col-title">Emails &amp; Analytics</div>
+    </div>
+    <div id="email-scroll">
+      <div class="dash-g">
+        <div class="dc"><div class="dc-n" id="d-t">—</div><div class="dc-l">Total</div></div>
+        <div class="dc"><div class="dc-n" id="d-f" style="color:var(--accent)">—</div><div class="dc-l">Filed</div></div>
+        <div class="dc"><div class="dc-n" id="d-e" style="color:var(--warn)">—</div><div class="dc-l">Escalated</div></div>
+        <div class="dc"><div class="dc-n" id="d-r" style="color:var(--ok)">—</div><div class="dc-l">Resolved</div></div>
+      </div>
+      <div class="sec-lbl">AI-Generated Emails</div>
+      <div id="elist"><div style="text-align:center;padding:18px;color:var(--muted);font-size:11px;font-family:var(--mono)">No emails yet</div></div>
+    </div>
+  </div>
 </main>
 
 <div id="toast"></div>
 
 <script>
-  const API = window.location.origin;
+const API = window.location.origin;
+const SESSION_KEY = 'user_' + Math.random().toString(36).substring(2, 10);
+const AGENTS = [
+  {key:'classifier',name:'Classifier Agent',  icon:'◈',desc:'Extracts category + location · Queries AlloyDB departments table'},
+  {key:'drafting',  name:'Drafting Agent',     icon:'◉',desc:'Generates formal legal-tone complaint letter'},
+  {key:'execution', name:'Execution Agent',    icon:'◎',desc:'AI-formats email · Stores in sent_emails table'},
+  {key:'tracking',  name:'Tracking Agent',     icon:'◐',desc:'Writes to grievances table · Logs reasoning to workflow_logs'},
+];
+const aState={classifier:'pending',drafting:'pending',execution:'pending',tracking:'pending'};
+const aTools={};
+let busy=false;
 
-  const AGENTS = [
-    {
-      key: 'classifier',
-      name: 'Classifier Agent',
-      icon: '◈',
-      desc: 'Extracts category, location and maps to authority via AlloyDB',
-      reasoning: 'Parsing complaint → querying departments table → returning authority details'
-    },
-    {
-      key: 'drafting',
-      name: 'Drafting Agent',
-      icon: '◉',
-      desc: 'Generates formal legal-tone complaint letter',
-      reasoning: 'Composing formal grievance with legal references and SLA context'
-    },
-    {
-      key: 'execution',
-      name: 'Execution Agent',
-      icon: '◎',
-      desc: 'Dispatches complaint and schedules follow-up',
-      reasoning: 'Sending email to authority · Scheduling SLA deadline reminder'
-    },
-    {
-      key: 'tracking',
-      name: 'Tracking Agent',
-      icon: '◐',
-      desc: 'Logs to AlloyDB · Initializes SLA monitoring',
-      reasoning: 'Writing to grievances table · Logging reasoning to workflow_logs · Starting auto-escalation watch'
-    },
-  ];
+function toast(m,d=3000){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
+function qs(el){document.getElementById('mi').value=el.textContent;send();}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-  function setExample(el) {
-    document.getElementById('complaint').value = el.textContent;
-    document.getElementById('complaint').focus();
-  }
-
-  function showToast(msg, duration = 3000) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), duration);
-  }
-
-  function buildPipeline(active = -1, doneUntil = -1, reasonings = {}) {
-    const body = document.getElementById('pipeline-body');
-    body.innerHTML = '';
-
-    AGENTS.forEach((agent, i) => {
-      const state = i <= doneUntil ? 'done' : i === active ? 'running' : 'pending';
-      const badgeClass = `badge-${state}`;
-      const badgeText = state === 'done' ? 'done' : state === 'running' ? 'running...' : 'waiting';
-      const iconClass = `step-icon ${state}`;
-      const iconContent = state === 'done' ? '✓' : agent.icon;
-      const reasoning = reasonings[agent.key] || agent.reasoning;
-
-      const div = document.createElement('div');
-      div.className = `agent-step`;
-      div.id = `step-${agent.key}`;
-      div.innerHTML = `
-        <div class="${iconClass}">${iconContent}</div>
-        <div class="step-content">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-            <div class="step-name">${agent.name}</div>
-            <span class="step-badge ${badgeClass}">${badgeText}</span>
-          </div>
-          <div class="step-desc">${agent.desc}</div>
-          <div class="step-reasoning ${state !== 'pending' ? 'show' : ''}">${reasoning}</div>
-        </div>
-      `;
-      body.appendChild(div);
-
-      // Stagger animation
-      setTimeout(() => div.classList.add('visible'), i * 80);
-    });
-  }
-
-  async function animatePipeline(reasonings = {}) {
-    for (let i = 0; i < AGENTS.length; i++) {
-      buildPipeline(i, i - 1, reasonings);
-      await sleep(700);
-      buildPipeline(i, i, reasonings);
-      await sleep(300);
-    }
-    buildPipeline(-1, AGENTS.length - 1, reasonings);
-  }
-
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function fileGrievance() {
-  const complaint = document.getElementById('complaint').value.trim();
-  if (!complaint) { showToast('Please describe your grievance first'); return; }
-
-  const btn = document.getElementById('btn-file');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Processing...';
-
-  // Reset pipeline to all pending
-  resetPipeline();
-
-  const eventSource = new EventSource(
-    `${API}/grievance/stream?complaint=${encodeURIComponent(complaint)}`,
-  );
-
-  // We need POST not GET for EventSource — use fetch with ReadableStream instead
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Processing...';
-
-  try {
-    const response = await fetch(`${API}/grievance/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ complaint })
-    });
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const raw = line.slice(6).trim();
-        if (!raw) continue;
-
-        let evt;
-        try { evt = JSON.parse(raw); } catch { continue; }
-
-        handleStreamEvent(evt);
-      }
-    }
-
-  } catch (err) {
-    showToast('Error: ' + err.message);
-    resetPipeline();
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = 'File Grievance';
-  }
+function addMsg(role,html,cls=''){
+  const w=document.getElementById('chat-messages');
+  const d=document.createElement('div');
+  d.className=`msg ${role}`;
+  d.innerHTML=`<div class="msg-av">${role==='user'?'U':'⚡'}</div><div class="msg-bub ${cls}">${html}</div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+  return d.querySelector('.msg-bub');
 }
-
-function handleStreamEvent(evt) {
-  console.log('SSE event:', evt); // visible in browser console
-
-  switch (evt.type) {
-
-    case 'pipeline_start':
-      resetPipeline();
-      break;
-
-    case 'agent_start':
-      setAgentState(evt.agent, 'running');
-      showToast(`${evt.agent_name} is working...`, 2000);
-      break;
-
-    case 'tool_call':
-      // Show tool being called inside the running agent
-      updateAgentReasoning(evt.agent, `Calling tool: ${evt.tool}...`);
-      break;
-
-    case 'tool_done':
-      updateAgentReasoning(evt.agent, `Tool ${evt.tool} completed`);
-      setAgentState(evt.agent, 'done');
-      break;
-
-    case 'final':
-      // Mark all pending as done
-      markAllDone();
-      parseAndShowResult(evt.response);
-      loadDashboard();
-      showToast('Grievance filed successfully');
-      break;
-
-    case 'heartbeat':
-      console.log(`Pipeline heartbeat: ${evt.count} events processed`);
-      break;
-
-    case 'error':
-      showToast('Error: ' + evt.message, 5000);
-      break;
-  }
+function addTyping(){
+  const w=document.getElementById('chat-messages');
+  const d=document.createElement('div');
+  d.className='msg bot';d.id='ti';
+  d.innerHTML='<div class="msg-av">⚡</div><div class="msg-bub" style="padding:0"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
 }
+function rmTyping(){const t=document.getElementById('ti');if(t)t.remove();}
 
-// Agent state management
-const agentStates = {};
-
-function resetPipeline() {
-  AGENTS.forEach(a => {
-    agentStates[a.key] = 'pending';
-  });
-  renderPipeline();
-}
-
-function setAgentState(key, state) {
-  agentStates[key] = state;
-  renderPipeline();
-}
-
-function markAllDone() {
-  AGENTS.forEach(a => {
-    if (agentStates[a.key] !== 'done') agentStates[a.key] = 'done';
-  });
-  renderPipeline();
-}
-
-function updateAgentReasoning(key, text) {
-  const el = document.getElementById(`reasoning-${key}`);
-  if (el) { el.textContent = text; el.classList.add('show'); }
-}
-
-function renderPipeline() {
-  const body = document.getElementById('pipeline-body');
-  body.innerHTML = '';
-
-  AGENTS.forEach((agent, i) => {
-    const state = agentStates[agent.key] || 'pending';
-    const div = document.createElement('div');
-    div.className = 'agent-step visible';
-    div.innerHTML = `
-      <div class="step-icon ${state}">
-        ${state === 'done' ? '✓' : state === 'running' ? '◌' : agent.icon}
+// Pipeline
+function resetPipe(){AGENTS.forEach(a=>{aState[a.key]='pending';aTools[a.key]=[];});renderPipe();}
+function renderPipe(){
+  const el=document.getElementById('pipe-scroll');el.innerHTML='';
+  AGENTS.forEach(a=>{
+    const s=aState[a.key],tools=(aTools[a.key]||[]).map(t=>`<span class="tool-tag">${t}</span>`).join('');
+    const d=document.createElement('div');d.className=`ac ${s}`;d.id=`ac-${a.key}`;
+    const ico=s==='done'?'✓':s==='running'?'◌':a.icon;
+    d.innerHTML=`
+      <div class="ac-top">
+        <div class="ac-name"><div class="ac-ico">${ico}</div>${a.name}</div>
+        <span class="ac-badge b-${s}">${s==='running'?'running...':s}</span>
       </div>
-      <div class="step-content">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <div class="step-name">${agent.name}</div>
-          <span class="step-badge badge-${state}">
-            ${state === 'done' ? 'done' : state === 'running' ? 'running...' : 'waiting'}
-          </span>
-        </div>
-        <div class="step-desc">${agent.desc}</div>
-        <div class="step-reasoning ${state !== 'pending' ? 'show' : ''}"
-             id="reasoning-${agent.key}">
-          ${agent.reasoning}
-        </div>
-      </div>
+      <div class="ac-desc">${a.desc}</div>
+      ${tools?`<div>${tools}</div>`:''}
+      <div class="ac-reason ${s!=='pending'?'show':''}" id="acr-${a.key}"></div>
     `;
-    body.appendChild(div);
+    el.appendChild(d);
   });
 }
+function setAgent(key,state,reason='',tool=''){
+  aState[key]=state;
+  if(tool){aTools[key]=aTools[key]||[];if(!aTools[key].includes(tool))aTools[key].push(tool);}
+  renderPipe();
+  if(reason){const r=document.getElementById(`acr-${key}`);if(r){r.textContent=reason;r.classList.add('show');}}
+}
+function allDone(){AGENTS.forEach(a=>{if(aState[a.key]!=='done')aState[a.key]='done';});renderPipe();}
 
-function parseAndShowResult(text) {
-  const id    = text.match(/ID:\s*([a-f0-9-]+)/i)?.[1] || '—';
-  const auth  = text.match(/Authority:\s*(.+)/i)?.[1]?.trim() || '—';
-  const email = text.match(/Email[^:]*:\s*(.+)/i)?.[1]?.trim() || '—';
-  const sla   = text.match(/SLA Deadline:\s*(.+)/i)?.[1]?.trim() || '—';
+// Send
+async function send(){
+  const inp=document.getElementById('mi');
+  const txt=inp.value.trim();
+  if(!txt||busy)return;
+  busy=true;inp.value='';inp.style.height='auto';
+  document.getElementById('bsend').disabled=true;
+  addMsg('user',esc(txt));
+  addTyping();
 
-  showResult('success', 'Complaint Filed', [
-    { label: 'Reference ID',  value: id,    cls: 'mono' },
-    { label: 'Authority',     value: auth },
-    { label: 'Email sent to', value: email, cls: 'mono' },
-    { label: 'SLA Deadline',  value: sla,   cls: 'warn' },
-    { label: 'Status',        value: 'Filed', cls: 'success' },
-    { label: 'Next action',   value: 'Auto-escalation if unresolved' },
-  ]);
+  const lower=txt.toLowerCase();
+  const locs=['delhi','ghaziabad','noida','mumbai','bangalore','chennai','hyderabad','pune','kolkata','lucknow','up','uttar pradesh'];
+  const issues=['crisis','problem','issue','not working','cut','supply','pothole','no water','no electricity','pension','complaint'];
+  const filing=['file','lodge','register','proceed','yes','haan','okay','ok','sure','go ahead','submit'];
+  const hasLoc=locs.some(l=>lower.includes(l));
+  const hasIssue=issues.some(i=>lower.includes(i));
+  const hasFiling=filing.some(f=>lower.includes(f));
+  const shouldStream=(hasLoc&&hasIssue)||hasFiling;
 
-  if (id !== '—') fetchAndShowLogs(id);
+  try{
+    if(shouldStream){await streamGrievance(txt);}
+    else{await generalQuery(txt);}
+  }catch(e){rmTyping();addMsg('bot',`Connection error. Make sure API is running on port 8080.`);}
+
+  busy=false;document.getElementById('bsend').disabled=false;
 }
 
-  async function fetchAndShowLogs(grievanceId) {
-    try {
-      const res  = await fetch(`${API}/logs/${grievanceId}`);
-      const data = await res.json();
-      if (!data.reasoning_trace) return;
-
-      const reasonings = {};
-      const keyMap = {
-        'classifier_agent': 'classifier',
-        'drafting_agent':   'drafting',
-        'execution_agent':  'execution',
-        'tracking_agent':   'tracking'
-      };
-
-      data.reasoning_trace.forEach(log => {
-        const key = keyMap[log.agent];
-        if (key) reasonings[key] = log.reasoning;
-      });
-
-      buildPipeline(-1, AGENTS.length - 1, reasonings);
-    } catch (e) {}
-  }
-
-  async function checkStatus() {
-    const keyword = document.getElementById('search-input').value.trim();
-    if (!keyword) { showToast('Enter a keyword to search'); return; }
-
-    try {
-      const res  = await fetch(`${API}/grievance/status?keyword=${encodeURIComponent(keyword)}`);
-      const data = await res.json();
-
-      if (!data.found) {
-        showResult('info', 'Status Lookup', [
-          { label: 'Result', value: data.message || 'No grievance found' }
-        ]);
-        return;
+async function streamGrievance(complaint){
+  resetPipe();let bubble=null;
+  const res=await fetch(`${API}/grievance/stream`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({complaint,session_key: SESSION_KEY})});
+  if(!res.ok)throw new Error(`HTTP ${res.status}`);
+  const reader=res.body.getReader();const dec=new TextDecoder();let buf='';
+  while(true){
+    const{done,value}=await reader.read();if(done)break;
+    buf+=dec.decode(value,{stream:true});
+    const lines=buf.split('\n');buf=lines.pop();
+    for(const line of lines){
+      if(!line.startsWith('data: '))continue;
+      const raw=line.slice(6).trim();if(!raw)continue;
+      let evt;try{evt=JSON.parse(raw);}catch{continue;}
+      switch(evt.type){
+        case'pipeline_start':
+          rmTyping();bubble=addMsg('bot','<span class="spin"></span>Running agent pipeline...','filing');break;
+        case'agent_start':
+          setAgent(evt.agent,'running','Processing...');
+          if(bubble)bubble.innerHTML=`<span class="spin"></span>${evt.agent_name} is working...`;break;
+        case'tool_call':
+          setAgent(evt.agent,'running',`Calling: ${evt.tool}`,evt.tool);break;
+        case'tool_done':
+          setAgent(evt.agent,'done',`Completed: ${evt.tool}`);break;
+        case'final':
+          rmTyping();allDone();
+          const txt=evt.response||'';
+          const id=txt.match(/ID:\s*([a-f0-9-]+)/i)?.[1];
+          const auth=txt.match(/Authority:\s*(.+)/i)?.[1]?.trim();
+          const email=txt.match(/Email[^:]*:\s*([^\n]+)/i)?.[1]?.trim();
+          const sla=txt.match(/SLA Deadline:\s*(.+)/i)?.[1]?.trim();
+          let html='Your complaint has been filed and is now being tracked.<br><br>';
+          if(id){
+            html+=`<div class="filed-card">
+              <div class="fr"><span class="fk">Reference ID</span><span class="fv teal">${id}</span></div>
+              <div class="fr"><span class="fk">Authority</span><span class="fv">${esc(auth||'—')}</span></div>
+              <div class="fr"><span class="fk">Email</span><span class="fv teal">${esc(email||'—')}</span></div>
+              <div class="fr"><span class="fk">SLA Deadline</span><span class="fv warn">${esc(sla||'—')}</span></div>
+              <div class="fr"><span class="fk">Status</span><span class="fv ok">Filed ✓</span></div>
+              <div class="fr"><span class="fk">Auto-escalation</span><span class="fv">Active if unresolved</span></div>
+            </div>`;
+          }else{html=txt.replace(/\n/g,'<br>');}
+          if(bubble){bubble.innerHTML=html;bubble.classList.remove('filing');}else{addMsg('bot',html);}
+          setTimeout(()=>{loadEmails();loadDash();},900);break;
+        case'heartbeat':console.log(`Heartbeat #${evt.count}`);break;
+        case'error':
+          rmTyping();
+          const em=`Sorry, an error occurred: ${esc(evt.message)}`;
+          if(bubble){bubble.innerHTML=em;bubble.classList.remove('filing');}else{addMsg('bot',em);}break;
       }
-
-      const statusCls = data.status === 'escalated' ? 'warn' :
-                        data.status === 'resolved'  ? 'success' : '';
-
-      showResult('info', 'Grievance Status', [
-        { label: 'Reference ID',     value: data.grievance_id, cls: 'mono' },
-        { label: 'Category',         value: data.category },
-        { label: 'Location',         value: data.location },
-        { label: 'Issue',            value: data.issue_summary },
-        { label: 'Status',           value: data.status, cls: statusCls },
-        { label: 'SLA Deadline',     value: data.sla_deadline },
-        { label: 'Escalation Level', value: data.escalation_level },
-        { label: 'Filed on',         value: data.filed_on },
-      ]);
-
-      if (data.reasoning_trace && data.reasoning_trace.length) {
-        const reasonings = {};
-        const keyMap = {
-          'classifier_agent': 'classifier',
-          'drafting_agent':   'drafting',
-          'execution_agent':  'execution',
-          'tracking_agent':   'tracking'
-        };
-        data.reasoning_trace.forEach(log => {
-          const key = keyMap[log.agent];
-          if (key) reasonings[key] = log.reasoning;
-        });
-        buildPipeline(-1, AGENTS.length - 1, reasonings);
-      }
-
-    } catch (err) {
-      showToast('Lookup failed: ' + err.message);
     }
   }
+}
 
-  async function runEscalation() {
-    const btn = document.querySelector('.btn-escalate');
-    btn.textContent = 'Checking SLA breaches...';
-    btn.disabled = true;
-
-    try {
-      const res  = await fetch(`${API}/escalate`, { method: 'POST' });
-      const data = await res.json();
-
-      const cards = document.getElementById('result-cards');
-
-      if (data.escalated_count === 0) {
-        showResult('success', 'Escalation Check Complete', [
-          { label: 'Result', value: data.message }
-        ]);
-        showToast('No SLA breaches found');
-        return;
-      }
-
-      // Show escalation summary card
-      cards.innerHTML = '';
-      const summaryCard = document.createElement('div');
-      summaryCard.className = 'result-card warning';
-      summaryCard.innerHTML = `
-        <div class="result-tag warning">⚠ Escalation Report</div>
-        <div class="result-field">
-          <span class="rf-label">Escalated</span>
-          <span class="rf-value warn">${data.escalated_count} grievance(s)</span>
-        </div>
-        <div class="result-field">
-          <span class="rf-label">Action taken</span>
-          <span class="rf-value">Auto-escalation emails queued</span>
-        </div>
-      `;
-      cards.appendChild(summaryCard);
-
-      // Show each escalated grievance
-      data.escalated.forEach(item => {
-        const el = document.createElement('div');
-        el.className = 'escalation-item';
-        el.innerHTML = `
-          <div class="esc-id">ID: ${item.grievance_id.substring(0,8).toUpperCase()}</div>
-          <div class="esc-issue">${item.issue_summary || item.category + ' — ' + item.location}</div>
-          <div class="esc-to">Escalated to: ${item.escalated_to}</div>
-          <div class="esc-days">${item.days_overdue} days overdue</div>
-        `;
-        cards.appendChild(el);
-      });
-
-      loadDashboard();
-      showToast(`${data.escalated_count} grievance(s) escalated`);
-
-    } catch (err) {
-      showToast('Escalation failed: ' + err.message);
-    } finally {
-      btn.textContent = 'Run SLA Check + Auto-Escalate';
-      btn.disabled = false;
+async function generalQuery(query){
+  try{
+    const res=await fetch(`${API}/grievance`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({complaint:query,session_key: SESSION_KEY})});
+    const data=await res.json();rmTyping();
+    const response=data.response||'I could not process that.';
+    // If it ended up filing, show properly
+    if(response.match(/ID:\s*[a-f0-9-]+/i)){
+      addMsg('bot','Let me process this as a formal complaint...');
+      await streamGrievance(query);return;
     }
-  }
+    let html=response.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+    addMsg('bot',html);
+    if(response.includes('SLA')||response.includes('filed'))loadDash();
+  }catch(e){rmTyping();addMsg('bot','Error connecting to API.');}
+}
 
-  function showResult(type, title, fields) {
-    const cards = document.getElementById('result-cards');
-    const card = document.createElement('div');
-    card.className = `result-card ${type}`;
+// Emails
+async function loadEmails(){
+  try{
+    const res=await fetch(`${API}/emails`);const data=await res.json();
+    const el=document.getElementById('elist');
+    if(!data.emails||!data.emails.length){el.innerHTML='<div style="text-align:center;padding:18px;color:var(--muted);font-size:11px;font-family:var(--mono)">No emails yet</div>';return;}
+    el.innerHTML=data.emails.map((e,i)=>`
+      <div class="ecard">
+        <div class="ehead"><span class="eid">#${e.id}</span><span class="${e.subject?.includes('ESCALAT')?'be':'bs'}">${e.subject?.includes('ESCALAT')?'escalation':'sent'}</span></div>
+        <div class="eto">To: <span>${esc(e.authority)}</span> &lt;${esc(e.to_email)}&gt;</div>
+        <div class="esubj">${esc(e.subject||'Grievance Complaint')}</div>
+        <div class="ebody" id="ep${i}">${esc((e.preview||e.body||'').substring(0,180))}</div>
+        <div class="eexpand" onclick="tog(${i})">▾ View full email</div>
+        <div class="efull" id="ef${i}">${esc(e.body||'')}</div>
+      </div>`).join('');
+  }catch(e){}
+}
+function tog(i){
+  const f=document.getElementById(`ef${i}`),p=document.getElementById(`ep${i}`),b=f.previousElementSibling;
+  if(f.style.display==='block'){f.style.display='none';p.style.display='block';b.textContent='▾ View full email';}
+  else{f.style.display='block';p.style.display='none';b.textContent='▴ Collapse';}
+}
 
-    const tagIcon = type === 'success' ? '✓' : type === 'warning' ? '⚠' : 'i';
-    card.innerHTML = `
-      <div class="result-tag ${type}">${tagIcon} ${title}</div>
-      ${fields.map(f => `
-        <div class="result-field">
-          <span class="rf-label">${f.label}</span>
-          <span class="rf-value ${f.cls || ''}">${f.value}</span>
-        </div>
-      `).join('')}
-    `;
+// Dashboard
+async function loadDash(){
+  try{
+    const res=await fetch(`${API}/dashboard`);const d=await res.json();
+    document.getElementById('d-t').textContent=d.total_grievances??0;
+    document.getElementById('d-f').textContent=d.filed??0;
+    document.getElementById('d-e').textContent=d.escalated??0;
+    document.getElementById('d-r').textContent=d.resolved??0;
+    document.getElementById('h-total').textContent=d.total_grievances??0;
+    document.getElementById('h-esc').textContent=d.escalated??0;
+    document.getElementById('h-res').textContent=d.resolved??0;
+  }catch(e){}
+}
 
-    cards.innerHTML = '';
-    cards.appendChild(card);
-  }
-
-  async function loadDashboard() {
-    try {
-      const res  = await fetch(`${API}/dashboard`);
-      const data = await res.json();
-
-      document.getElementById('stat-total').textContent     = data.total_grievances ?? 0;
-      document.getElementById('stat-filed').textContent     = data.filed ?? 0;
-      document.getElementById('stat-escalated').textContent = data.escalated ?? 0;
-      document.getElementById('stat-resolved').textContent  = data.resolved ?? 0;
-
-      document.getElementById('hdr-total').textContent     = data.total_grievances ?? 0;
-      document.getElementById('hdr-escalated').textContent = data.escalated ?? 0;
-      document.getElementById('hdr-resolved').textContent  = data.resolved ?? 0;
-    } catch (e) {}
-  }
-
-  // Init
-  loadDashboard();
-  setInterval(loadDashboard, 30000);
+loadDash();loadEmails();
+setInterval(loadDash,20000);setInterval(loadEmails,12000);
 </script>
 </body>
 </html>

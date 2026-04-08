@@ -22,6 +22,7 @@ from grievance_ai_agent.agent import root_agent
 from grievance_ai_agent.tools.escalation_tool import check_and_escalate
 from grievance_ai_agent.tools.tracking_tool import get_grievance_status
 from grievance_ai_agent.tools.db_tools import engine
+from collections import defaultdict
 
 # ── Logging setup ─────────────────────────────────────────────
 logging.basicConfig(
@@ -56,32 +57,33 @@ AGENT_KEY_MAP = {
 
 class GrievanceRequest(BaseModel):
     complaint: str
+    session_key: str = "default_user"
 
+user_sessions = {}  # session_key → session_id
+
+async def get_or_create_session(session_key: str) -> str:
+    """Get existing session or create new one for this user."""
+    if session_key not in user_sessions:
+        session_id = str(uuid.uuid4())
+        await session_service.create_session(
+            app_name=APP_NAME,
+            user_id=session_key,
+            session_id=session_id
+        )
+        user_sessions[session_key] = session_id
+        log.info(f"New session created | key={session_key[:8]} | id={session_id[:8]}")
+    else:
+        log.info(f"Reusing session | key={session_key[:8]} | id={user_sessions[session_key][:8]}")
+    return user_sessions[session_key]
 
 # ── SSE stream endpoint ────────────────────────────────────────
 @app.post("/grievance/stream")
 async def file_grievance_stream(req: GrievanceRequest):
-    """
-    File a grievance and stream real-time agent events via SSE.
-    Frontend listens to this and updates pipeline UI as agents fire.
-    """
     async def event_stream():
-        session_id = str(uuid.uuid4())
-        user_id    = "citizen"
+        session_id = await get_or_create_session(req.session_key)
+        user_id    = req.session_key
 
-        log.info(f"NEW GRIEVANCE | session={session_id[:8]} | complaint='{req.complaint[:60]}'")
-
-        try:
-            await session_service.create_session(
-                app_name=APP_NAME,
-                user_id=user_id,
-                session_id=session_id
-            )
-            log.info(f"Session created | {session_id[:8]}")
-        except Exception as e:
-            log.error(f"Session creation failed: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-            return
+        log.info(f"STREAM | session={session_id[:8]} | '{req.complaint[:60]}'")
 
         runner = Runner(
             agent=root_agent,
@@ -96,10 +98,8 @@ async def file_grievance_stream(req: GrievanceRequest):
 
         current_agent = None
         event_count   = 0
-        final_text    = ""
 
         try:
-            log.info("Starting agent pipeline...")
             yield f"data: {json.dumps({'type': 'pipeline_start'})}\n\n"
 
             async for event in runner.run_async(
@@ -109,49 +109,38 @@ async def file_grievance_stream(req: GrievanceRequest):
             ):
                 event_count += 1
 
-                # ── Agent started ──────────────────────────
                 if hasattr(event, 'author') and event.author:
-                    agent_name = event.author
+                    agent_name   = event.author
                     pipeline_key = AGENT_KEY_MAP.get(agent_name)
-
                     if pipeline_key and pipeline_key != current_agent:
                         current_agent = pipeline_key
-                        log.info(f"AGENT RUNNING → {agent_name} (key={pipeline_key})")
-
+                        log.info(f"AGENT → {agent_name}")
                         yield f"data: {json.dumps({'type': 'agent_start', 'agent': pipeline_key, 'agent_name': agent_name})}\n\n"
 
-                # ── Tool called ────────────────────────────
                 if hasattr(event, 'content') and event.content:
                     for part in (event.content.parts or []):
                         if hasattr(part, 'function_call') and part.function_call:
-                            tool_name = part.function_call.name
-                            log.info(f"  TOOL CALL → {tool_name}")
-                            yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name, 'agent': current_agent})}\n\n"
-
+                            tool = part.function_call.name
+                            log.info(f"  TOOL CALL → {tool}")
+                            yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool, 'agent': current_agent})}\n\n"
                         if hasattr(part, 'function_response') and part.function_response:
-                            tool_name = part.function_response.name
-                            log.info(f"  TOOL DONE ← {tool_name}")
-                            yield f"data: {json.dumps({'type': 'tool_done', 'tool': tool_name, 'agent': current_agent})}\n\n"
+                            tool = part.function_response.name
+                            log.info(f"  TOOL DONE ← {tool}")
+                            yield f"data: {json.dumps({'type': 'tool_done', 'tool': tool, 'agent': current_agent})}\n\n"
 
-                # ── Agent completed ────────────────────────
                 if event.is_final_response():
-                    raw = ""
+                    text = ""
                     if event.content and event.content.parts:
-                        raw = event.content.parts[0].text or ""
-                    final_text = raw
-                    log.info(f"PIPELINE COMPLETE | events_processed={event_count}")
-                    log.info(f"Final response: {final_text[:200]}")
-
-                    yield f"data: {json.dumps({'type': 'final', 'response': final_text})}\n\n"
+                        text = event.content.parts[0].text or ""
+                    log.info(f"DONE | {event_count} events | '{text[:120]}'")
+                    yield f"data: {json.dumps({'type': 'final', 'response': text})}\n\n"
                     break
 
-                # Heartbeat every 10 events so browser doesn't timeout
                 if event_count % 10 == 0:
-                    log.info(f"  ... processing (event #{event_count})")
                     yield f"data: {json.dumps({'type': 'heartbeat', 'count': event_count})}\n\n"
 
         except Exception as e:
-            log.error(f"Pipeline error: {type(e).__name__}: {e}")
+            log.error(f"Pipeline error: {e}")
             import traceback
             log.error(traceback.format_exc())
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
@@ -159,28 +148,16 @@ async def file_grievance_stream(req: GrievanceRequest):
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control":               "no-cache",
-            "X-Accel-Buffering":           "no",
-            "Access-Control-Allow-Origin": "*",
-        }
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Access-Control-Allow-Origin": "*"}
     )
 
 
-# ── Regular POST (non-streaming fallback) ─────────────────────
 @app.post("/grievance")
 async def file_grievance(req: GrievanceRequest):
-    """Non-streaming fallback endpoint."""
-    session_id = str(uuid.uuid4())
-    user_id    = "citizen"
+    session_id = await get_or_create_session(req.session_key)
+    user_id    = req.session_key
 
-    log.info(f"GRIEVANCE (sync) | complaint='{req.complaint[:60]}'")
-
-    await session_service.create_session(
-        app_name=APP_NAME,
-        user_id=user_id,
-        session_id=session_id
-    )
+    log.info(f"SYNC | '{req.complaint[:60]}'")
 
     runner = Runner(
         agent=root_agent,
@@ -203,16 +180,14 @@ async def file_grievance(req: GrievanceRequest):
     ):
         event_count += 1
         if event_count % 5 == 0:
-            log.info(f"  processing event #{event_count}...")
-
+            log.info(f"  processing #{event_count}...")
         if event.is_final_response():
             if event.content and event.content.parts:
                 final_response = event.content.parts[0].text or ""
-            log.info(f"Done | {event_count} events | response='{final_response[:100]}'")
+            log.info(f"Done | {event_count} events")
             break
 
     return {"status": "success", "response": final_response}
-
 
 # ── Other endpoints ────────────────────────────────────────────
 @app.get("/grievance/status")
@@ -314,3 +289,33 @@ def get_dashboard():
 @app.get("/")
 def serve_ui():
     return FileResponse("index.html")
+
+
+@app.get("/emails")
+def get_emails():
+    """Get all sent emails for demo display."""
+    try:
+        with engine.connect() as conn:
+            results = conn.execute(text("""
+                SELECT id, to_email, authority, subject, body, sent_at, status
+                FROM sent_emails
+                ORDER BY sent_at DESC
+                LIMIT 20
+            """)).fetchall()
+            return {
+                "emails": [
+                    {
+                        "id":        row[0],
+                        "to_email":  row[1],
+                        "authority": row[2],
+                        "subject":   row[3],
+                        "preview":   row[4][:200] if row[4] else "",
+                        "body":      row[4] or "",
+                        "sent_at":   str(row[5]),
+                        "status":    row[6]
+                    }
+                    for row in results
+                ]
+            }
+    except Exception:
+        return {"emails": []}
