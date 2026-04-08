@@ -16,6 +16,7 @@ from sqlalchemy import text
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk.models.google_llm import _ResourceExhaustedError
 from google.genai import types
 
 from grievance_ai_agent.agent import root_agent
@@ -61,6 +62,14 @@ class GrievanceRequest(BaseModel):
 
 user_sessions = {}  # session_key → session_id
 
+MAX_PIPELINE_RETRIES = max(0, int(os.getenv("GRIEVANCE_MAX_PIPELINE_RETRIES", "2")))
+PIPELINE_RETRY_BASE_SECONDS = max(
+    1.0, float(os.getenv("GRIEVANCE_PIPELINE_RETRY_BASE_SECONDS", "2"))
+)
+RESOURCE_EXHAUSTED_MESSAGE = (
+    "The AI service is busy right now. Please try again in a moment."
+)
+
 async def get_or_create_session(session_key: str) -> str:
     """Get existing session or create new one for this user."""
     if session_key not in user_sessions:
@@ -75,6 +84,44 @@ async def get_or_create_session(session_key: str) -> str:
     else:
         log.info(f"Reusing session | key={session_key[:8]} | id={user_sessions[session_key][:8]}")
     return user_sessions[session_key]
+
+
+def _is_resource_exhausted_error(exc: Exception) -> bool:
+    if isinstance(exc, _ResourceExhaustedError):
+        return True
+    return "RESOURCE_EXHAUSTED" in str(exc)
+
+
+async def _run_pipeline_with_retries(runner: Runner, *, user_id: str, session_id: str, message: types.Content):
+    """
+    Retry whole ADK pipeline when Gemini/Vertex responds with 429 RESOURCE_EXHAUSTED.
+    """
+    attempt = 0
+    while True:
+        try:
+            events = []
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=message
+            ):
+                events.append(event)
+            return events, attempt
+        except Exception as exc:
+            is_resource_exhausted = _is_resource_exhausted_error(exc)
+            should_retry = is_resource_exhausted and attempt < MAX_PIPELINE_RETRIES
+            if not should_retry:
+                raise
+
+            delay_seconds = PIPELINE_RETRY_BASE_SECONDS * (2 ** attempt)
+            log.warning(
+                "Gemini quota/rate-limit hit | attempt=%s/%s | retry_in=%.1fs",
+                attempt + 1,
+                MAX_PIPELINE_RETRIES + 1,
+                delay_seconds,
+            )
+            await asyncio.sleep(delay_seconds)
+            attempt += 1
 
 # ── SSE stream endpoint ────────────────────────────────────────
 @app.post("/grievance/stream")
@@ -101,12 +148,16 @@ async def file_grievance_stream(req: GrievanceRequest):
 
         try:
             yield f"data: {json.dumps({'type': 'pipeline_start'})}\n\n"
-
-            async for event in runner.run_async(
+            events, retry_count = await _run_pipeline_with_retries(
+                runner,
                 user_id=user_id,
                 session_id=session_id,
-                new_message=message
-            ):
+                message=message,
+            )
+            if retry_count:
+                yield f"data: {json.dumps({'type': 'retry_recovered', 'attempts': retry_count})}\n\n"
+
+            for event in events:
                 event_count += 1
 
                 if hasattr(event, 'author') and event.author:
@@ -140,6 +191,11 @@ async def file_grievance_stream(req: GrievanceRequest):
                     yield f"data: {json.dumps({'type': 'heartbeat', 'count': event_count})}\n\n"
 
         except Exception as e:
+            if _is_resource_exhausted_error(e):
+                log.warning("Pipeline exhausted after retries | session=%s", session_id[:8])
+                yield f"data: {json.dumps({'type': 'error', 'message': RESOURCE_EXHAUSTED_MESSAGE, 'retryable': True})}\n\n"
+                return
+
             log.error(f"Pipeline error: {e}")
             import traceback
             log.error(traceback.format_exc())
@@ -173,11 +229,25 @@ async def file_grievance(req: GrievanceRequest):
     final_response = ""
     event_count    = 0
 
-    async for event in runner.run_async(
-        user_id=user_id,
-        session_id=session_id,
-        new_message=message
-    ):
+    try:
+        events, retry_count = await _run_pipeline_with_retries(
+            runner,
+            user_id=user_id,
+            session_id=session_id,
+            message=message,
+        )
+    except Exception as e:
+        if _is_resource_exhausted_error(e):
+            log.warning("Sync pipeline exhausted after retries | session=%s", session_id[:8])
+            return {
+                "status": "error",
+                "error": "resource_exhausted",
+                "message": RESOURCE_EXHAUSTED_MESSAGE,
+                "retryable": True,
+            }
+        raise
+
+    for event in events:
         event_count += 1
         if event_count % 5 == 0:
             log.info(f"  processing #{event_count}...")
@@ -187,7 +257,7 @@ async def file_grievance(req: GrievanceRequest):
             log.info(f"Done | {event_count} events")
             break
 
-    return {"status": "success", "response": final_response}
+    return {"status": "success", "response": final_response, "retries": retry_count}
 
 # ── Other endpoints ────────────────────────────────────────────
 @app.get("/grievance/status")
