@@ -13,23 +13,21 @@ execution_agent = Agent(
 You are an Execution Agent.
 
 You receive complaint details and authority information.
-Call the send_grievance_email tool exactly once.
+Call the send_grievance_email tool exactly once with:
+- to_email: the authority email
+- authority_name: the authority name
+- subject: "Formal Grievance - [brief issue description]"
+- complaint_text: the drafted complaint letter or issue summary
+- location: the city/location of the grievance
+- sla_days: the SLA days number
 
-Use:
-- authority_name from input
-- to_email as the authority email
-- subject as "Formal Grievance - [issue_summary]"
-- complaint_text as the drafted complaint text if available, otherwise the issue summary
+After the tool returns, respond with:
 
-After the tool returns, respond with a clear human-readable confirmation like this:
+Email sent to [authority_name] at [to_email]
+Gmail ID: [gmail_id if gmail_sent is true, else "stored locally"]
+Reference: [email_id]
 
-Email dispatched to [authority_name] at [recipient email]
-Follow-up reminder scheduled for [sla_deadline]
-Reference: Grievance complaint - [issue_summary]
-Email ID: [email_id]
-
-Keep it natural and readable. No JSON. No technical terms.
-No curly braces in your response.
+No curly braces. No JSON. Keep it readable.
 """,
     tools=[send_grievance_email_tool]
 )

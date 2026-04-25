@@ -310,26 +310,34 @@ async function streamGrievance(complaint){
           setAgent(evt.agent,'running',`Calling: ${evt.tool}`,evt.tool);break;
         case'tool_done':
           setAgent(evt.agent,'done',`Completed: ${evt.tool}`);break;
-        case'final':
-          rmTyping();allDone();
-          const txt=evt.response||'';
-          const id=txt.match(/ID:\s*([a-f0-9-]+)/i)?.[1];
-          const auth=txt.match(/Authority:\s*(.+)/i)?.[1]?.trim();
-          const email=txt.match(/Email[^:]*:\s*([^\n]+)/i)?.[1]?.trim();
-          const sla=txt.match(/SLA Deadline:\s*(.+)/i)?.[1]?.trim();
-          let html='Your complaint has been filed and is now being tracked.<br><br>';
-          if(id){
-            html+=`<div class="filed-card">
-              <div class="fr"><span class="fk">Reference ID</span><span class="fv teal">${id}</span></div>
-              <div class="fr"><span class="fk">Authority</span><span class="fv">${esc(auth||'—')}</span></div>
-              <div class="fr"><span class="fk">Email</span><span class="fv teal">${esc(email||'—')}</span></div>
-              <div class="fr"><span class="fk">SLA Deadline</span><span class="fv warn">${esc(sla||'—')}</span></div>
-              <div class="fr"><span class="fk">Status</span><span class="fv ok">Filed ✓</span></div>
-              <div class="fr"><span class="fk">Auto-escalation</span><span class="fv">Active if unresolved</span></div>
-            </div>`;
-          }else{html=txt.replace(/\n/g,'<br>');}
-          if(bubble){bubble.innerHTML=html;bubble.classList.remove('filing');}else{addMsg('bot',html);}
-          setTimeout(()=>{loadEmails();loadDash();},900);break;
+          case 'final':
+  rmTyping(); allDone();
+  const txt = evt.response || '';
+  const id    = txt.match(/ID:\s*([a-f0-9-]+)/i)?.[1];
+  const auth  = txt.match(/Authority:\s*(.+)/i)?.[1]?.trim();
+  const email = txt.match(/Email[^:]*:\s*([^\n]+)/i)?.[1]?.trim();
+  const sla   = txt.match(/SLA Deadline:\s*(.+)/i)?.[1]?.trim();
+  // Check if Gmail actually sent
+  const gmailSent = txt.toLowerCase().includes('gmail');
+
+  let html = 'Your complaint has been filed and tracked.<br><br>';
+  if (id) {
+    html += `<div class="filed-card">
+      <div class="fr"><span class="fk">Reference ID</span><span class="fv teal">${id}</span></div>
+      <div class="fr"><span class="fk">Authority</span><span class="fv">${esc(auth||'—')}</span></div>
+      <div class="fr"><span class="fk">Email</span><span class="fv teal">${esc(email||'—')}</span></div>
+      <div class="fr"><span class="fk">SLA Deadline</span><span class="fv warn">${esc(sla||'—')}</span></div>
+      <div class="fr"><span class="fk">Gmail status</span>
+        <span class="fv ${gmailSent?'ok':'warn'}">${gmailSent?'Sent via Gmail API':'Stored locally'}</span>
+      </div>
+      <div class="fr"><span class="fk">Auto-escalation</span><span class="fv">Active if unresolved</span></div>
+    </div>`;
+  } else { html = txt.replace(/\n/g,'<br>'); }
+
+  if (bubble) { bubble.innerHTML = html; bubble.classList.remove('filing'); }
+  else addMsg('bot', html);
+  setTimeout(() => { loadEmails(); loadDash(); }, 900);
+  break;
         case'heartbeat':console.log(`Heartbeat #${evt.count}`);break;
         case'error':
           rmTyping();
