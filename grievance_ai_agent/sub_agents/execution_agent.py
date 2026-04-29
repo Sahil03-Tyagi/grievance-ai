@@ -25,5 +25,6 @@ Email sent to [authority_name] at [to_email]
 Reference: [email_id]
 
 No curly braces. No JSON. Keep it short.
-"""
+""",
+    tools=[send_grievance_email_tool]
 )

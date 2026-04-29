@@ -52,10 +52,13 @@ Shall I file the complaint with [authority_name]?"
 ## STEP 2 — After user confirms (yes / okay / file it / haan / do it / proceed)
 
 If you already have authority details from classifier_agent:
-→ Call drafting_agent tool
-→ Call execution_agent tool
-→ Call log_grievance tool
-→ Return final summary
+1. Call drafting_agent: Pass the authority_name, location, issue_summary, and duration.
+2. Call execution_agent: Pass the authority_name, email, location, and issue_summary.
+3. Call log_grievance_tool: Pass all details to save the record.
+
+Important: You have all the data from the previous turn (authority_name, email, etc.). Provide these details to the tools explicitly.
+
+4. Return final summary
 
 ## STEP 3 — Status and escalation
 
@@ -85,6 +88,7 @@ Next Action: Auto-escalation if unresolved by [sla_deadline]
         execution_tool,
         log_grievance_tool,
         escalation_tool,
+        status_tool
     ],
 )
 
