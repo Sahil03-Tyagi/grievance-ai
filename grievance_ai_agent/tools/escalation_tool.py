@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import text
 import json
 from ..tools.db_tools import engine
-
+from ..tools.gmail_tool import send_escalation_email
 
 def check_and_escalate(demo_mode: bool = False) -> dict:
     """
@@ -59,6 +59,20 @@ def check_and_escalate(demo_mode: bool = False) -> dict:
                     escalation_level = 1
                 WHERE id = :id
             """), {"id": grievance_id})
+
+            try:
+                send_escalation_email(
+                    to_email=escalation_email,
+                    authority_name=f"Senior Officer ({authority_name})",
+                    grievance_id=grievance_id,
+                    original_issue=issue_summary,
+                    days_overdue=days_overdue,
+                    original_authority=authority_name
+                )
+                email_status = "sent"
+            except Exception as e:
+                print(f"Escalation email failed: {e}")
+                email_status = "failed"
 
             conn.execute(text("""
                 INSERT INTO workflow_logs
