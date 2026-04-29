@@ -32,7 +32,7 @@ def log_grievance(
 
     with engine.connect() as conn:
 
-        # Duplicate check — prevent double logging from agent retries
+        # Duplicate check
         existing = conn.execute(text("""
             SELECT id FROM grievances
             WHERE category = :cat
@@ -54,13 +54,14 @@ def log_grievance(
                 "message":      "Duplicate detected. Returning existing grievance."
             }
 
-        # Save grievance
+        # Save grievance with citizen details
         conn.execute(text("""
             INSERT INTO grievances
               (id, user_input, category, location, issue_summary,
                status, sla_deadline, escalation_level)
             VALUES
-              (:id, :input, :cat, :loc, :summary, 'filed', :sla, 0)
+              (:id, :input, :cat, :loc, :summary,
+               'filed', :sla, 0)
         """), {
             "id":      grievance_id,
             "input":   issue_summary,
@@ -82,7 +83,7 @@ def log_grievance(
             (
                 "drafting_agent",
                 "draft_complaint",
-                f"Formal complaint drafted for {category} issue. Legal tone applied. Addressed to {authority_name}.",
+                f"Formal complaint drafted for {category} issue. Legal tone applied. Addressed to {authority_name}",
                 json.dumps({"category": category, "authority": authority_name}),
                 json.dumps({"complaint_drafted": True})
             ),
@@ -122,12 +123,11 @@ def log_grievance(
         conn.commit()
 
     return {
-        "grievance_id": grievance_id,
-        "status":       "filed",
-        "sla_deadline": sla_deadline,
-        "next_check":   sla_deadline
+        "grievance_id":  grievance_id,
+        "status":        "filed",
+        "sla_deadline":  sla_deadline,
+        "next_check":    sla_deadline
     }
-
 
 def get_grievance_status(keyword: str) -> dict:
     """

@@ -73,26 +73,40 @@ def _build_email_body(
     reference_id: str
 ) -> str:
     today = datetime.now().strftime("%d %B %Y")
+
+    clean_issue = issue_summary.strip()
+    if len(clean_issue) > 200 or clean_issue.lower().startswith('to,'):
+        lines = [l.strip() for l in clean_issue.split('\n') if l.strip()]
+        for line in lines:
+            if line.lower().startswith('subject:'):
+                clean_issue = line.replace('Subject:', '').replace('subject:', '').strip()
+                break
+        else:
+            clean_issue = next(
+                (l for l in lines if not l.startswith(('To,', 'The ', 'Subject:', 'Respected'))),
+                lines[0] if lines else issue_summary
+            )[:200]
+
     return f"""To,
 The {authority_name},
 
-Subject: Formal Grievance Complaint - {issue_summary}
+Subject: Formal Grievance Complaint - {clean_issue}
 
 Respected Sir/Madam,
 
 I am writing to formally register my grievance regarding the following issue:
 
-Issue: {issue_summary}
+Issue: {clean_issue}
 Location: {location}
 Reference ID: {reference_id}
 Date: {today}
 
-This matter falls under your jurisdiction. As per the Consumer Protection Act, 
-2019 (Section 2(42)) and the relevant Service Level Agreement, I request prompt 
+This matter falls under your jurisdiction. As per the Consumer Protection Act,
+2019 (Section 2(42)) and the relevant Service Level Agreement, I request prompt
 resolution within {sla_days} days of receipt of this complaint.
 
-If this matter remains unresolved beyond the SLA period, I reserve the right to 
-escalate this to the appropriate higher authority, the Consumer Disputes Redressal 
+If this matter remains unresolved beyond the SLA period, I reserve the right to
+escalate this to the appropriate higher authority, the Consumer Disputes Redressal
 Commission, and relevant regulatory bodies.
 
 I trust you will take immediate action on this matter.
@@ -105,7 +119,6 @@ Date: {today}
 This complaint was filed and tracked via GrievanceOS.
 Reference: #{reference_id}
 """
-
 
 def _build_escalation_body(
     authority_name: str,
@@ -224,22 +237,7 @@ def send_grievance_email(
     location: str = "India",
     sla_days: int = 7
 ) -> dict:
-    """
-    Sends a formal grievance email via Gmail API and stores the record.
-
-    Args:
-        to_email: Recipient email address of the authority
-        authority_name: Name of the authority
-        subject: Email subject line
-        complaint_text: Complaint details or issue summary
-        location: Location of the grievance
-        sla_days: Days allowed for resolution
-
-    Returns:
-        status, email_id, message, gmail_sent
-    """
-    email_id  = str(uuid.uuid4())[:8].upper()
-    reference = email_id
+    email_id = str(uuid.uuid4())[:8].upper()
 
     body = _build_email_body(
         authority_name = authority_name,
@@ -247,10 +245,10 @@ def send_grievance_email(
         issue_summary  = complaint_text,
         location       = location,
         sla_days       = sla_days,
-        reference_id   = reference
+        reference_id   = email_id
     )
 
-    gmail_id = _send_via_gmail_api(to_email, subject, body)
+    gmail_id   = _send_via_gmail_api(to_email, subject, body)
     gmail_sent = bool(gmail_id)
 
     _store_email(
@@ -273,7 +271,6 @@ def send_grievance_email(
         "subject":    subject,
         "preview":    body[:400]
     }
-
 
 def send_escalation_email(
     to_email: str,

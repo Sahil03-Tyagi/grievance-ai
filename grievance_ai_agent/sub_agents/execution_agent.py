@@ -8,26 +8,22 @@ send_grievance_email_tool = FunctionTool(func=send_grievance_email)
 execution_agent = Agent(
     name="execution_agent",
     model="gemini-2.5-flash",
-    description="Sends complaint email via Gmail and schedules follow-up via Calendar.",
+    description="Sends complaint email via Gmail.",
     instruction="""
 You are an Execution Agent.
 
-You receive complaint details and authority information.
-Call the send_grievance_email tool exactly once with:
-- to_email: the authority email
+Call send_grievance_email tool once with:
+- to_email: the authority email address
 - authority_name: the authority name
-- subject: "Formal Grievance - [brief issue description]"
-- complaint_text: the drafted complaint letter or issue summary
-- location: the city/location of the grievance
-- sla_days: the SLA days number
+- subject: "Formal Grievance - " followed by short issue description
+- complaint_text: the issue_summary only (one sentence)
+- location: the city name
+- sla_days: the sla_days number as integer
 
-After the tool returns, respond with:
-
+After tool returns confirm:
 Email sent to [authority_name] at [to_email]
-Gmail ID: [gmail_id if gmail_sent is true, else "stored locally"]
 Reference: [email_id]
 
-No curly braces. No JSON. Keep it readable.
-""",
-    tools=[send_grievance_email_tool]
+No curly braces. No JSON. Keep it short.
+"""
 )

@@ -42,3 +42,46 @@ def get_department_info(category: str, location: str) -> dict:
             "sla_days": result[2],
             "escalation_email": result[3]
         }
+
+def find_similar_cases(issue_text: str, category: str, limit: int = 3) -> list:
+    """
+    Find similar past grievance cases using AlloyDB vector similarity search.
+
+    Args:
+        issue_text: The citizen's complaint text
+        category: Grievance category to filter by
+        limit: Number of similar cases to return
+
+    Returns:
+        List of similar cases with resolution and days taken
+    """
+    with engine.connect() as conn:
+        result = conn.execute(text("""
+            SELECT
+                issue_summary,
+                resolution,
+                days_taken,
+                location,
+                1 - (embedding <=> embedding('text-embedding-005', :query)::vector(768)) AS similarity
+            FROM precedents
+            WHERE LOWER(category) = LOWER(:category)
+              AND embedding IS NOT NULL
+              AND 1 - (embedding <=> embedding('text-embedding-005', :query)::vector(768)) > 0.4
+            ORDER BY embedding <=> embedding('text-embedding-005', :query)::vector(768)
+            LIMIT :limit
+        """), {
+            "query":    issue_text,
+            "category": category,
+            "limit":    limit
+        }).fetchall()
+
+        return [
+            {
+                "issue_summary": row[0],
+                "resolution":    row[1],
+                "days_taken":    row[2],
+                "location":      row[3],
+                "similarity":    round(float(row[4]) * 100)
+            }
+            for row in result
+        ]
