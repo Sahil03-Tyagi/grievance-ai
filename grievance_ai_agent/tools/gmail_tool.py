@@ -6,19 +6,28 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
+import smtplib
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../.env'))
 
 GMAIL_SENDER    = os.getenv("GMAIL_SENDER_EMAIL")
 TOKEN_PATH      = os.getenv("GMAIL_TOKEN_PATH", "gmail_token.json")
 CREDENTIALS_PATH = os.getenv("GMAIL_CREDENTIALS_PATH", "credentials.json")
-
+SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").replace(" ", "").replace("\xa0", "").strip()
 
 def _get_gmail_service():
     """Build authenticated Gmail API service."""
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
+
+    print("=== DEBUG GMAIL ===")
+    print("TOKEN_PATH:", TOKEN_PATH)
+    print("TOKEN EXISTS:", os.path.exists(TOKEN_PATH))
+    print("CREDS_PATH:", CREDENTIALS_PATH)
+    print("CREDS EXISTS:", os.path.exists(CREDENTIALS_PATH))
+    print("===================")
 
     SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
@@ -172,26 +181,22 @@ def _send_via_gmail_api(
     Falls back gracefully if Gmail API fails.
     """
     try:
-        service = _get_gmail_service()
+        msg = MIMEText(body)
+        msg["Subject"] = subject
+        msg["From"] = SMTP_EMAIL
+        msg["To"] = to_email
 
-        msg = MIMEMultipart()
-        msg['to']      = to_email
-        msg['from']    = GMAIL_SENDER or 'me'
-        msg['subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.send_message(msg)
 
-        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-        sent = service.users().messages().send(
-            userId='me',
-            body={'raw': raw}
-        ).execute()
-
-        gmail_id = sent.get('id', '')
-        print(f"Gmail API: Email sent | id={gmail_id} | to={to_email}")
-        return gmail_id
+        print(f"SMTP: Email sent to {to_email}")
+        return "smtp_sent"
 
     except Exception as e:
-        print(f"Gmail API error: {e}. Storing email record without sending.")
+        import traceback
+        print("SMTP ERROR:")
+        print(traceback.format_exc())
         return ""
 
 
